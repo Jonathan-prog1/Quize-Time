@@ -24,8 +24,9 @@ class QuizApp(tk.Tk):
             self.frames[F] = frame
 
             frame.grid(row=0, column=0, sticky="nsew")
-
+        
         self.show_frame(MainMenu)
+        
     
     def show_frame(self, cont):
         frame = self.frames[cont]

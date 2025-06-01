@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk 
 import json
+import os
 from constants import LARGE_FONT,PAPER
 
 class MainMenu(tk.Frame):
@@ -52,41 +53,71 @@ class Questions(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        label = tk.Label(self, text="Quiz Catagory", font=LARGE_FONT)
+        self.directory = os.path.abspath('.')  # Set the directory to the current working directory
+        
+
+
+        label = tk.Label(self, text="Quiz Category", font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        
-        
-        
-        self.list = tk.Listbox(self, bg=PAPER,font=LARGE_FONT, width=30, justify='center')
+        self.list = tk.Listbox(self, bg=PAPER, font=LARGE_FONT, width=30, justify='center')
         self.list.pack()
-        self.list.insert(tk.END,"Math")
-        self.list.insert(tk.END, "Time")
+        self.populate_listbox()  # Populate the listbox with files from the 'questions' subdirectory
 
-        submit_bt = tk.Button(self, text="Add Catagory", font=LARGE_FONT, command=self.new_catagory)
+        submit_bt = tk.Button(self, text="Add Category", font=LARGE_FONT, command=self.new_category)
         submit_bt.pack()
 
-        delete_bt = tk.Button(self, text="Delet Catagory", font=LARGE_FONT, command=self.deleted)
+        delete_bt = tk.Button(self, text="Delete Category", font=LARGE_FONT, command=self.deleted)
         delete_bt.pack()
-        
-        button1 = ttk.Button(self, text="Start Quiz now", 
-                            command=lambda: controller.show_frame(Quiz_start))
+
+        button1 = ttk.Button(self, text="Start Quiz now", command=lambda: controller.show_frame(Quiz_start))
         button1.pack()
-        
-        button2 = ttk.Button(self, text="Back to Main Menu", 
-                            command=lambda: controller.show_frame(MainMenu))
+
+        button2 = ttk.Button(self, text="Back to Main Menu", command=lambda: controller.show_frame(MainMenu))
         button2.pack()
-   
-   
-    def new_catagory(self):
-            self.controller.show_frame(Add_Questions)
 
-        
+
+    def populate_listbox(self):
+        try:
+            subdirectory = 'questions'
+            subdirectory_path = os.path.join(self.directory, subdirectory)
+
+            # List all files in the specified subdirectory, excluding hidden files
+            visible_files = [f for f in os.listdir(subdirectory_path) if not f.startswith('.')]
+            
+            for file in visible_files:
+                # Remove file extension
+                filename_without_extension = os.path.splitext(file)[0]
+                self.list.insert(tk.END, filename_without_extension)
+        except FileNotFoundError:
+            messagebox.showerror("Directory Not Found", f"The directory '{self.directory}' does not exist.")
+        except PermissionError:
+            messagebox.showerror("Permission Denied", f"Permission denied to access '{self.directory}'.")
+        except FileNotFoundError:
+            messagebox.showerror("Subdirectory Not Found", f"The subdirectory '{subdirectory}' does not exist.")
+
+    def new_category(self):
+        self.controller.show_frame(Add_Questions)
+
     def deleted(self):
-        item = self.list.get(self.list.curselection())
-        if messagebox.askyesno(title="WARNING!", message=f"Are you sure you want to delete your Catagory about: {item}"):
+        try:
+            # Get the selected item from the listbox
+            selected_item = self.list.get(self.list.curselection())
+            # Construct the full file path
+            file_path = os.path.join(self.directory, 'questions', selected_item + '.json')
+            
+            if messagebox.askyesno(title="Confirm Deletion", message=f"Are you sure you want to delete your Category about: {selected_item}"):
+                # Check if the file exists
+                if os.path.exists(file_path):
+                    # Delete the file
+                    os.remove(file_path)
+                # Remove the item from the listbox
+                self.list.delete(self.list.curselection())
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
 
-            self.list.delete(self.list.curselection())
+
+       
 
 class Add_Questions(tk.Frame):
 
@@ -97,12 +128,6 @@ class Add_Questions(tk.Frame):
         self.center_frame.pack(expand=True)
 
         self.questions = []
-
-
-        # Category Entry
-        # Create a frame to hold all widgets and center it
-        self.center_frame = tk.Frame(self)
-        self.center_frame.pack(expand=True)
 
         # Category Entry
         self.category_label = tk.Label(self.center_frame, text="Category Name:", font=LARGE_FONT)
@@ -152,6 +177,7 @@ class Add_Questions(tk.Frame):
         close_button.pack(side="bottom")
 
     def add_question(self):
+        self.category_entry.config(state="disabled")
         category = self.category_entry.get().strip()
         if not category:
             messagebox.showwarning("Input Error", "Please enter a category name.")
@@ -204,68 +230,35 @@ class Add_Questions(tk.Frame):
             messagebox.showwarning("No Questions", "No questions to save.")
             return
 
-        filename = f"{self.questions[0]['category']}.json"
+        # Define the directory where you want to save the files
+        save_directory = "questions"
+
+        # Create the directory if it doesn't exist
+        if not os.path.exists(save_directory):
+            os.makedirs(save_directory)
+
+        # Use the category of the first question to name the file
+        category = self.questions[0]['category']
+        filename = f"{category}.json"
+        file_path = os.path.join(save_directory, filename)
+
+        # Prepare the data to be saved
         data = {"questions": [q["question"] for q in self.questions]}
 
         try:
-            with open(filename, "w") as file:
+            # Open the file in write mode and save the data
+            with open(file_path, "w") as file:
                 json.dump(data, file, indent=4)
-            messagebox.showinfo("Questions Saved", f"Questions saved to '{filename}' successfully!")
+            messagebox.showinfo("Questions Saved", f"All Questions have been saved for the category: {category}")
+            self.controller.show_frame(Questions)
         except Exception as e:
             messagebox.showerror("Save Error", f"Failed to save questions: {e}")
         
-    
-        
-        
-        
-        '''
-        label = tk.Label(self, text="What do you want the Catogory to be for theys Questions?", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
-
-        self.textbox = tk.Entry(self, font=LARGE_FONT)
-        self.textbox.pack()
-       
-        label = tk.Label(self, text="what is the Question you want to add to this Catagory", font=LARGE_FONT)
-        label.pack(pady=10, padx=10)
-
-        self.textbox = tk.Entry(self, font=LARGE_FONT)
-        self.textbox.pack()
-        
-        
-        close_button = ttk.Button(self, text="Close", command=parent.quit)
-        close_button.pack(side="bottom")
-
-        button2 = ttk.Button(self, text="Back to Main Menu", 
-                            command=lambda: controller.show_frame(MainMenu))
-        button2.pack(side="bottom")
-
-        add_bt = tk.Button(self, text="Add Question", font=LARGE_FONT, command=self.add)
-        add_bt.pack(side="bottom")
-
-        
 
         
         
-    def add(self):
-        category = simpledialog.askstring("Category", "Enter the category name:")
-        if category:
-            # Ensure the category name is valid for a file name
-            valid_category = "".join(c if c.isalnum() else"_" for c in  category)
-            filename = f"{valid_category}.json"
+        
 
-            # Write the data to the JSON file
-            with open(filename, "w") as file:
-                json.dump(qa_data, file, indent=4)
-            print(f"Category: {category}")
-            #self.textbox.delete(0, tk.END) # Clear the Entry widget
-            
-            
-            
-            
-            #category = simpledialog.askstring("Category", "Enter the category name:")
-        #if category:
-            #print(f"Category: {category}")
-        '''
         
         
         
