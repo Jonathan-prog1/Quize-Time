@@ -1,5 +1,5 @@
 import tkinter as tk
-from pages import MainMenu, Quiz_start, Questions
+from pages import MainMenu, Quiz_start, Questions,Add_Questions
 
 
 
@@ -16,7 +16,7 @@ class QuizApp(tk.Tk):
 
         self.frames = {}
 
-        for F in (MainMenu, Quiz_start, Questions):
+        for F in (MainMenu, Quiz_start, Questions,Add_Questions):
 
 
             frame = F(container, self)
